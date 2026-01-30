@@ -1,0 +1,2 @@
+# astrbot_plugin_server_status
+基于Astrbot的服务器状态插件
