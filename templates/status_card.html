@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器状态卡片</title>
+    <style>
+        /* 字体定义 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: transparent;
+            font-family: '{{font_family}}', -apple-system, BlinkMacSystemFont, 
+                        'Segoe UI', 'Microsoft YaHei', sans-serif;
+            color: {{text_color}};
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 800px;
+            max-width: 100%;
+        }
+
+        .status-card {
+            background: {{background_color}};
+            backdrop-filter: blur({{blur_strength}}px);
+            -webkit-backdrop-filter: blur({{blur_strength}}px);
+            border-radius: {{border_radius}}px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('{{background_image}}');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            z-index: -1;
+        }
+
+        .anime-character {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 200px;
+            height: 300px;
+            background-image: url('{{character_image}}');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.8;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba({{primary_color_rgb}}, 0.3);
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(135deg, {{primary_color}}, {{secondary_color}});
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .timestamp {
+            font-size: 14px;
+            color: rgba({{text_color_rgb}}, 0.7);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba({{primary_color_rgb}}, 0.5);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .stat-name {
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba({{primary_color_rgb}}, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-progress {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .stat-progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        .server-list {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .server-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: {{primary_color}};
+        }
+
+        .server-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .server-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba({{primary_color_rgb}}, 0.3);
+        }
+
+        .server-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .server-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .server-status.online {
+            background: {{success_color}};
+            box-shadow: 0 0 10px {{success_color}};
+        }
+
+        .server-status.offline {
+            background: {{error_color}};
+            box-shadow: 0 0 10px {{error_color}};
+        }
+
+        .server-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .ai-analysis {
+            background: linear-gradient(135deg, 
+                rgba({{primary_color_rgb}}, 0.1), 
+                rgba({{secondary_color_rgb}}, 0.1));
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba({{primary_color_rgb}}, 0.2);
+            margin-top: 20px;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: {{primary_color}};
+        }
+
+        .ai-content {
+            line-height: 1.6;
+            font-size: 15px;
+            white-space: pre-wrap;
+        }
+
+        .ai-emoji {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba({{text_color_rgb}}, 0.7);
+            font-size: 14px;
+        }
+
+        /* 动画效果 */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .status-card {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .status-card {
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 24px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .anime-character {
+                display: none;
+            }
+        }
+
+        /* 装饰元素 */
+        .decoration-corner {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            opacity: 0.1;
+        }
+
+        .decoration-corner.tl {
+            top: 0;
+            left: 0;
+            border-top: 4px solid {{primary_color}};
+            border-left: 4px solid {{primary_color}};
+            border-radius: 20px 0 0 0;
+        }
+
+        .decoration-corner.tr {
+            top: 0;
+            right: 0;
+            border-top: 4px solid {{secondary_color}};
+            border-right: 4px solid {{secondary_color}};
+            border-radius: 0 20px 0 0;
+        }
+
+        .decoration-corner.bl {
+            bottom: 0;
+            left: 0;
+            border-bottom: 4px solid {{secondary_color}};
+            border-left: 4px solid {{secondary_color}};
+            border-radius: 0 0 0 20px;
+        }
+
+        .decoration-corner.br {
+            bottom: 0;
+            right: 0;
+            border-bottom: 4px solid {{primary_color}};
+            border-right: 4px solid {{primary_color}};
+            border-radius: 0 0 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-card">
+            <!-- 装饰角 -->
+            <div class="decoration-corner tl"></div>
+            <div class="decoration-corner tr"></div>
+            <div class="decoration-corner bl"></div>
+            <div class="decoration-corner br"></div>
+            
+            {% if background_image %}
+            <div class="card-bg"></div>
+            {% endif %}
+            
+            {% if show_character and character_image %}
+            <div class="anime-character"></div>
+            {% endif %}
+            
+            <div class="header">
+                <div class="title">✨ 服务器状态面板</div>
+                <div class="timestamp">🕐 {{timestamp}}</div>
+            </div>
+            
+            <div class="stats-grid">
+                <!-- CPU 使用率 -->
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <div class="stat-name">
+                            <div class="stat-icon">📊</div>
+                            CPU 使用率
+                        </div>
+                        <div style="font-size: 12px; opacity: 0.7;">{{cpu_count}}核心</div>
+                    </div>
+                    <div class="stat-value" style="color: {{cpu_color}}">{{cpu_usage}}%</div>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" 
+                             style="width: {{cpu_usage}}%; background: {{cpu_color}};"></div>
+                    </div>
+                </div>
+                
+                <!-- 内存使用率 -->
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <div class="stat-name">
+                            <div class="stat-icon">💾</div>
+                            内存使用率
+                        </div>
+                    </div>
+                    <div class="stat-value" style="color: {{memory_color}}">{{memory_usage}}%</div>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" 
+                             style="width: {{memory_usage}}%; background: {{memory_color}};"></div>
+                    </div>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.7;">
+                        已用: {{memory_used}} GB / {{memory_total}} GB
+                    </div>
+                </div>
+                
+                <!-- 磁盘使用率 -->
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <div class="stat-name">
+                            <div class="stat-icon">💿</div>
+                            磁盘使用率
+                        </div>
+                    </div>
+                    <div class="stat-value" style="color: {{disk_color}}">{{disk_usage}}%</div>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" 
+                             style="width: {{disk_usage}}%; background: {{disk_color}};"></div>
+                    </div>
+                    <div style="font-size: 12px; margin-top: 5px; opacity: 0.7;">
+                        已用: {{disk_used}} GB / {{disk_total}} GB
+                    </div>
+                </div>
+                
+                <!-- CPU 温度 -->
+                <div class="stat-item">
+                    <div class="stat-header">
+                        <div class="stat-name">
+                            <div class="stat-icon">🌡️</div>
+                            CPU 温度
+                        </div>
+                    </div>
+                    <div class="stat-value" style="color: {{temp_color}}">{{cpu_temp}}°C</div>
+                    <div class="stat-progress">
+                        <div class="stat-progress-bar" 
+                             style="width: {{temp_percentage}}%; background: {{temp_color}};"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 服务器连接状态 -->
+            <div class="server-list">
+                <div class="server-header">
+                    <div class="stat-icon">🔗</div>
+                    服务器连接状态
+                </div>
+                {% for server in servers %}
+                <div class="server-item">
+                    <div class="server-info">
+                        <div class="server-status {{server.status}}"></div>
+                        <div>
+                            <div style="font-weight: bold; font-size: 16px;">{{server.name}}</div>
+                            <div style="font-size: 12px; opacity: 0.8;">{{server.address}}</div>
+                        </div>
+                    </div>
+                    <div class="server-stats">
+                        <div>
+                            <div style="font-size: 12px; opacity: 0.8;">延迟</div>
+                            <div style="font-weight: bold; color: {{server.latency_color}};">{{server.latency}}ms</div>
+                        </div>
+                        <div style="background: {{server.status == 'online' ? success_color : error_color}}20; 
+                                     padding: 4px 12px; 
+                                     border-radius: 12px;
+                                     font-size: 12px;">
+                            {{server.status == 'online' ? '在线' : '离线'}}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- AI分析 -->
+            {% if ai_analysis %}
+            <div class="ai-analysis">
+                <div class="ai-header">
+                    <div class="stat-icon">🤖</div>
+                    AI 状态分析
+                </div>
+                <div class="ai-content">
+                    {{ai_analysis}}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 页脚 -->
+            <div class="footer">
+                🚀 系统运行时间: {{uptime}} | 📅 最后更新: {{update_time}} | ⚡ 刷新命令: {{trigger_command}}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加一些交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为统计项添加点击效果
+            const statItems = document.querySelectorAll('.stat-item');
+            statItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+            });
+            
+            // 进度条动画
+            const progressBars = document.querySelectorAll('.stat-progress-bar');
+            progressBars.forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 100);
+            });
+            
+            // 添加时钟更新
+            function updateClock() {
+                const clockElement = document.querySelector('.timestamp');
+                if (clockElement) {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('zh-CN', { 
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    clockElement.innerHTML = `🕐 ${timeString}`;
+                }
+            }
+            
+            // 每秒更新一次时间
+            setInterval(updateClock, 1000);
+            updateClock();
+            
+            // 服务器状态指示灯动画
+            const statusIndicators = document.querySelectorAll('.server-status.online');
+            statusIndicators.forEach(indicator => {
+                setInterval(() => {
+                    indicator.style.boxShadow = `0 0 ${Math.random() * 15 + 5}px {{success_color}}`;
+                }, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
